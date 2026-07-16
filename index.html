@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WGRA 2027 Interactive Operating Planner</title>
+<style>
+  :root{
+    --navy:#1f3864; --navy2:#2d4d80; --bg:#f4f6fa; --card:#ffffff;
+    --ink:#1a1a2e; --grey:#5a6472; --line:#e3e8f0;
+    --green:#2e7d32; --greenbg:#e8f5e9; --red:#c00000; --redbg:#fdecea;
+    --amber:#b45f06; --amberbg:#fff4e0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Calibri,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+  header{background:var(--navy);color:#fff;padding:18px 28px}
+  header h1{font-size:21px;font-weight:700}
+  header p{font-size:12.5px;opacity:.85;margin-top:3px}
+  .wrap{display:grid;grid-template-columns:minmax(340px,460px) 1fr;gap:18px;padding:18px 28px;max-width:1500px;margin:0 auto}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--navy);margin-bottom:12px;border-bottom:2px solid var(--line);padding-bottom:6px}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .row label{flex:1;font-size:13px;color:var(--ink)}
+  .row label small{display:block;color:var(--grey);font-size:11px}
+  .row input[type=range]{flex:1.2;accent-color:var(--navy)}
+  .row .val{width:86px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .row input[type=number]{width:86px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;text-align:right;font-weight:600;font-size:13px}
+  .presets{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .presets button{flex:1;min-width:100px;padding:9px 6px;border:1.5px solid var(--navy);border-radius:8px;background:#fff;color:var(--navy);font-weight:700;font-size:13px;cursor:pointer}
+  .presets button:hover{background:var(--navy);color:#fff}
+  .verdict{border-radius:10px;padding:18px 20px;margin-bottom:16px;color:#fff}
+  .verdict.pass{background:linear-gradient(135deg,#2e7d32,#43a047)}
+  .verdict.fail{background:linear-gradient(135deg,#b71c1c,#d84334)}
+  .verdict .big{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+  .verdict .sub{font-size:13px;opacity:.92;margin-top:2px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .kpi .n{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td{padding:4.5px 4px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  td:last-child{text-align:right;font-weight:600;white-space:nowrap}
+  tr.tot td{font-weight:800;border-top:2px solid var(--navy);border-bottom:none;padding-top:7px}
+  tr.sub td{color:var(--grey);font-size:12px}
+  .flag{border-radius:8px;padding:9px 12px;font-size:12.5px;margin-top:10px}
+  .flag.warn{background:var(--amberbg);color:var(--amber)}
+  .flag.bad{background:var(--redbg);color:var(--red)}
+  .flag.ok{background:var(--greenbg);color:var(--green)}
+  .locked{background:#eef1f7;border:1px dashed var(--navy);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--navy);margin-top:10px}
+  .asks li{margin:6px 0 6px 18px;font-size:13px}
+  .footer{padding:10px 28px 26px;color:var(--grey);font-size:11.5px;max-width:1500px;margin:0 auto}
+  h3.g{font-size:12px;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>WGRA 2027 Interactive Operating Planner</h1>
+  <p>Move any slider and every number updates instantly. Green banner = the plan works. Red banner = it doesn't, and the bottom panel tells you exactly what would fix it.</p>
+</header>
+
+<div style="max-width:1500px;margin:0 auto;padding:18px 28px 0">
+  <details class="card" style="margin-bottom:0">
+    <summary style="cursor:pointer;font-weight:700;color:var(--navy);font-size:14px">How to read this planner — click to expand (worth 2 minutes before a board meeting)</summary>
+    <div style="margin-top:12px;font-size:13.5px;line-height:1.6">
+      <p style="margin-bottom:8px"><b>What "passing" means.</b> The board set one test for 2027: pay every bill on time — including the final construction payment of roughly $130,000 and the bank loan — and still finish December 2027 with at least $20,000 in the bank as a cushion. The big banner at the top right tells you whether the plan you've dialed in passes that test, and by how much.</p>
+      <p style="margin-bottom:8px"><b>Why assessment money is shown separately.</b> The $430 renovation assessment is promised to the bank. The moment a member pays it, it belongs to the loan — it cannot buy chemicals, pay guards, or cover the contractor. This planner enforces that rule automatically: if assessments don't fully cover the $97,183 yearly loan payment, the difference is taken out of operating money; if they collect more than the loan payment, the extra sits locked in a reserve and never shows up as spendable cash.</p>
+      <p style="margin-bottom:8px"><b>What a "guard-hour" is.</b> One lifeguard working one hour. If the pool is open 9 hours with 2 guards on the clock (1 actively on stand, 1 backup rotating in hourly), that day uses 18 guard-hours. It's how we convert "operating hours" into payroll dollars, and how we check whether 4 guards can physically cover the schedule.</p>
+      <p style="margin-bottom:8px"><b>The April 1 test.</b> The final construction bill comes due around April 1, 2027 — before the pool opens and before most members historically pay. Because enrollment now opens September 1, 2026, the planner shows how many members must be <i>fully paid up</i> by April 1 to cover that bill. For scale: in 2025, only 42 members had paid by April 1. We are also negotiating to move the bill to April 30, which makes this much easier.</p>
+      <p><b>Where the starting numbers come from.</b> Every default is pulled from WGRA's own books — the 2024 and 2025 P&amp;Ls, the May 2026 balance sheet, the loan terms from the bank, and the July 2026 board packet. Numbers that are estimates rather than facts say so in the fine print under each slider.</p>
+    </div>
+  </details>
+</div>
+
+<div class="wrap">
+<!-- ============ INPUTS ============ -->
+<div>
+  <div class="presets">
+    <button onclick="preset('cons')">Conservative</button>
+    <button onclick="preset('base')">Base</button>
+    <button onclick="preset('agg')">Aggressive</button>
+  </div>
+
+  <div class="card">
+    <h2>Membership &amp; Pricing</h2>
+    <div class="row"><label>Total members<small>2025 had 220. Assumes the same mix as 2025: 79% households, 11% singles, 10% seniors</small></label><input type="range" id="members" min="150" max="270" step="1"><span class="val" id="v_members"></span></div>
+    <div class="row"><label>Household dues<small>2025 price: $500. Nearby pools charge $450–$675</small></label><input type="range" id="hh" min="450" max="700" step="5"><span class="val" id="v_hh"></span></div>
+    <div class="row"><label>— new households<small id="cap_newhh">First-timers pay a one-time $150 fee; returning households pay $50.</small></label><input type="range" id="newhh" min="0" max="50" step="1"><span class="val" id="v_newhh"></span></div>
+    <div class="row"><label>Single dues<small>2025 price: $300</small></label><input type="range" id="sgl" min="250" max="450" step="5"><span class="val" id="v_sgl"></span></div>
+    <div class="row"><label>— new singles<small id="cap_newsgl">Same $150 new / $50 returning fee structure.</small></label><input type="range" id="newsgl" min="0" max="50" step="1"><span class="val" id="v_newsgl"></span></div>
+    <div class="row"><label>Senior dues<small>2025 price: $300. Most nearby pools charge seniors $25–30 less than singles</small></label><input type="range" id="snr" min="250" max="450" step="5"><span class="val" id="v_snr"></span></div>
+    <div class="row"><label>— new seniors<small id="cap_newsnr">Same $150 new / $50 returning fee structure.</small></label><input type="range" id="newsnr" min="0" max="50" step="1"><span class="val" id="v_newsnr"></span></div>
+    <div class="row"><label>Renovation assessment per member<small>Goes straight to the bank for the loan — can never pay for operations</small></label><input type="range" id="assess" min="300" max="550" step="10"><span class="val" id="v_assess"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Extended Hours (zero guard cost)</h2>
+    <div class="row"><label>Add-on price per year<small>Key-fob access outside guarded hours (early mornings, etc.). No guard on duty, so it costs nothing to provide. 2025 price: $55; the expanded-hours proposal is $75</small></label><input type="range" id="extp" min="40" max="120" step="5"><span class="val" id="v_extp"></span></div>
+    <div class="row"><label>Share of members who buy it<small>The 2025 books show ~91 buyers (about 40%), though earlier models said 51% — confirm before promising the higher number</small></label><input type="range" id="extt" min="20" max="80" step="1"><span class="val" id="v_extt"></span></div>
+  </div>
+
+  <div class="card">
+    <h2>Guard Schedule &amp; Staffing</h2>
+    <div class="row"><label>Weekday guarded hours per day<small>Hours a guard is on stand Mon–Fri. Example: 1pm–8pm = 7 hours</small></label><input type="range" id="wd" min="0" max="12" step="0.5"><span class="val" id="v_wd"></span></div>
+    <div class="row"><label>Weekend guarded hours per day<small>Example: 11am–8pm = 9 hours</small></label><input type="range" id="we" min="0" max="12" step="0.5"><span class="val" id="v_we"></span></div>
+    <div class="row"><label>Season length<small>Memorial Day to Labor Day = 14 weeks</small></label><input type="range" id="weeks" min="12" max="16" step="1"><span class="val" id="v_weeks"></span></div>
+    <div class="row"><label>Guards on the clock each hour<small>1 actively on stand + 1 backup rotating in hourly — both are paid. Default = 2 total per hour</small></label><input type="range" id="stand" min="1" max="3" step="1"><span class="val" id="v_stand"></span></div>
+    <div class="row"><label>Busy-time extra guard<small>Share of open hours when a 3rd guard is added (weekend afternoons). 25% = a quarter of all open hours</small></label><input type="range" id="peak" min="0" max="50" step="5"><span class="val" id="v_peak"></span></div>
+    <div class="row"><label>Guard pay per hour<small>Current confirmed rate: $14</small></label><input type="range" id="wage" min="12" max="20" step="0.5"><span class="val" id="v_wage"></span></div>
+    <div class="row"><label>Lifeguards you can hire<small>Doesn't change payroll (total hours stay the same) — it decides whether the schedule is humanly possible. See the feasibility panel</small></label><input type="range" id="guards" min="2" max="10" step="1"><span class="val" id="v_guards"></span></div>
+    <div class="row"><label>Extra guarded hours for swim lessons<small>Only needed if you want lesson revenue (set under Other Revenue). Adds instructor pay at the guard wage</small></label><input type="range" id="proggh" min="0" max="400" step="20"><span class="val" id="v_proggh"></span></div>
+    <div class="row"><label>Head guard / manager season stipend</label><input type="number" id="stipend" step="250"></div>
+  </div>
+
+  <div class="card">
+    <h2>Other Revenue</h2>
+    <div class="row"><label>Sponsorships<small>Banners, lane naming, local business tiers. 2025 actual was $2,530 — anything above that requires real sales effort. Repeats every year if maintained</small></label><input type="range" id="spons" min="0" max="20000" step="500"><span class="val" id="v_spons"></span></div>
+    <div class="row"><label>Founding Patron gifts / bricks / naming rights<small>One-time gifts tied to the renovation (engraved bricks, donor wall). Does NOT repeat in 2028 — don't build the future on it</small></label><input type="range" id="patron" min="0" max="25000" step="1000"><span class="val" id="v_patron"></span></div>
+    <div class="row"><label>Pool rentals / private events<small>Parties and after-hours events. 2025 actual was only $907 — the new pool makes growth plausible, not guaranteed</small></label><input type="range" id="rent" min="0" max="12000" step="500"><span class="val" id="v_rent"></span></div>
+    <div class="row"><label>Swim lesson revenue<small>Only achievable if you add lesson guard-hours in the staffing section above</small></label><input type="range" id="lessons" min="0" max="21000" step="500"><span class="val" id="v_lessons"></span></div>
+    <div class="row"><label>Swim team income<small>Gators dues + meet concessions. Team costs are under Costs below</small></label><input type="number" id="swimin" step="500"></div>
+    <div class="row"><label>Concessions, buddy passes &amp; guest fees</label><input type="number" id="conc" step="250"></div>
+    <div class="row"><label>YMCA field rental<small>Fixed lease: $1,016.67/month — WGRA's only year-round income</small></label><input type="number" id="field" step="100"></div>
+  </div>
+
+  <div class="card">
+    <h2>Costs &amp; Cash Anchors</h2>
+    <div class="row"><label>Pool chemicals<small>New plaster needs ~25% less chemicals than the old pool. Default = 2025's $19,671 minus 25%, plus a 10% safety cushion = $16,229</small></label><input type="number" id="chem" step="250"></div>
+    <div class="row"><label>Insurance<small>Fixed annual premium (2025: $9,817). Not yet re-quoted for the new facility — could change</small></label><input type="number" id="ins" step="250"></div>
+    <div class="row"><label>Utilities<small>Power &amp; water incl. the new required pump. 2024 full year was $8,998</small></label><input type="number" id="util" step="250"></div>
+    <div class="row"><label>Repairs &amp; maintenance (pool, grounds, field)<small>Much lower than 2024's $22K — the new pool needs far less fixing</small></label><input type="number" id="rm" step="250"></div>
+    <div class="row"><label>Swim team costs<small>Coaches, meets, gear — offset by swim team income above</small></label><input type="number" id="swimex" step="250"></div>
+    <div class="row"><label>Everything else that's fixed<small>Insurance-like costs that come no matter what: licenses &amp; taxes, software subscriptions, card-processing fees, marketing, snack-bar supplies</small></label><input type="number" id="fixed" step="250"></div>
+    <div class="row"><label>Final construction bill (due ~April 2027)<small>WGRA's own worksheets disagree on the amount ($126K–$143K). The contractor must confirm it in writing — slide up to test the worst case</small></label><input type="range" id="gap" min="120000" max="150000" step="500"><span class="val" id="v_gap"></span></div>
+    <div class="row"><label>Cash in bank on Jan 1, 2027<small>$58,905 on hand in May 2026, minus ~$990/month of winter costs. Rises if fall enrollment collects early</small></label><input type="number" id="start" step="500"></div>
+    <div class="row"><label>Cash cushion required at year-end<small>The board's safety margin against surprises</small></label><input type="number" id="floor" step="1000"></div>
+    <div class="row"><label>Annual bank loan payment<small>Set by contract: $697,500 borrowed at 7% for 10 years = $97,183/yr. Not adjustable in real life</small></label><input type="number" id="loan" step="1"></div>
+  </div>
+</div>
+
+<!-- ============ RESULTS ============ -->
+<div>
+  <div id="verdict" class="verdict"><div class="big" id="vd_num"></div><div class="sub" id="vd_txt"></div></div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="n" id="k_total"></div><div class="l">Total collections</div></div>
+    <div class="kpi"><div class="n" id="k_oprev"></div><div class="l">Operating revenue</div></div>
+    <div class="kpi"><div class="n" id="k_opex"></div><div class="l">Operating expenses</div></div>
+    <div class="kpi"><div class="n" id="k_apr"></div><div class="l">Must be fully paid by Apr 1</div></div>
+  </div>
+
+  <div class="card">
+    <h2>The Loan &amp; the Assessment — Money That's Spoken For</h2>
+    <p style="font-size:12.5px;color:var(--grey);margin-bottom:8px">Assessment dollars go straight to the bank. This panel checks whether they fully cover the year's loan payments — if not, the shortfall comes out of operating money.</p>
+    <table id="t_loan"></table>
+    <div class="locked" id="lockmsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>Can We Actually Staff This Schedule?</h2>
+    <p style="font-size:12.5px;color:var(--grey);margin-bottom:8px">Converts your chosen operating hours into lifeguard workload and checks it against the roster you can hire.</p>
+    <table id="t_guard"></table>
+    <div id="guardflag"></div>
+  </div>
+
+  <div class="card">
+    <h2>The 2027 Money Story, Start to Finish</h2>
+    <p style="font-size:12.5px;color:var(--grey);margin-bottom:8px">Start with what's in the bank, add everything collected, subtract everything spent. The bottom line has to beat the cushion target.</p>
+    <table id="t_cash"></table>
+  </div>
+
+  <div class="card">
+    <h2>Revenue Detail</h2>
+    <table id="t_rev"></table>
+  </div>
+
+  <div class="card">
+    <h2>Expense Detail</h2>
+    <table id="t_exp"></table>
+  </div>
+
+  <div class="card">
+    <h2>What the Team Owns</h2>
+    <p style="font-size:12.5px;color:var(--grey);margin-bottom:8px">The plan above, translated into individual commitments — or, if it's failing, the menu of ways to fix it.</p>
+    <div id="asks"></div>
+  </div>
+</div>
+</div>
+
+<div class="footer">
+  Where the numbers come from: WGRA's 2024 and 2025 profit &amp; loss statements, the May 2026 balance sheet, the bank's loan terms, and the July 2026 board packet.
+  The "everything else that's fixed" default of $13,300 is: licenses/taxes/subscriptions $6,000 + card-processing fees $2,500 + marketing $2,000 + snack-bar supplies $2,800. Payroll taxes are added at 9.2% of wages.
+  The April 1 test assumes enrollment opens September 1, 2026 and winter costs run ~$990/month; the construction bill is modeled as due April 1 — moving it to April 30 (in negotiation) makes the test easier.
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => (n<0?"−$":"$") + Math.abs(Math.round(n)).toLocaleString();
+
+const DEFAULTS = { // Base plan
+  members:230, newhh:10, newsgl:0, newsnr:0, hh:550, sgl:325, snr:300, assess:430,
+  extp:75, extt:50,
+  wd:7, we:9, weeks:14, stand:2, peak:25, wage:14, guards:4, proggh:120, stipend:3000,
+  spons:9000, patron:14000, rent:6000, lessons:0, swimin:20000, conc:7000, field:12200,
+  chem:16229, ins:10000, util:9800, rm:13000, swimex:11000, fixed:13300,
+  gap:130000, start:51975, floor:20000, loan:97183,
+};
+const PRESETS = {
+  cons:{members:220,newhh:0,newsgl:0,newsnr:0, hh:500,sgl:300,snr:300, extp:55,extt:51, spons:4000,patron:8000,rent:2500,lessons:0,swimin:18000,conc:4300,swimex:10000,fixed:11500},
+  base:{},
+  agg:{members:245,newhh:25,newsgl:0,newsnr:0, hh:575,sgl:350,snr:325, extp:75,extt:55, spons:12000,patron:18000,rent:8000,lessons:0,swimin:21000,conc:8500,swimex:12000,fixed:15000},
+};
+
+const sliders=["members","newhh","newsgl","newsnr","hh","sgl","snr","assess","extp","extt","wd","we","weeks","stand","peak","wage","guards","proggh","spons","patron","rent","lessons","gap"];
+const numbers=["stipend","swimin","conc","field","chem","ins","util","rm","swimex","fixed","start","floor","loan"];
+
+function setAll(vals){
+  for(const k in vals){ if($(k)) $(k).value = vals[k]; }
+  calc();
+}
+function preset(name){ setAll({...DEFAULTS, ...PRESETS[name]}); }
+
+function calc(){
+  const g = {}; [...sliders,...numbers].forEach(k=> g[k]=parseFloat($(k).value)||0);
+
+  // --- membership split 79/11/10 (computed early so the new-member sliders can be capped per tier)
+  const hhN = Math.round(g.members*0.79), sglN = Math.round(g.members*0.11), snrN = g.members-hhN-sglN;
+
+  // each tier's "new" slider can never exceed that tier's member count
+  $("newhh").max = hhN; if(g.newhh>hhN){ g.newhh=hhN; $("newhh").value=hhN; }
+  $("newsgl").max = sglN; if(g.newsgl>sglN){ g.newsgl=sglN; $("newsgl").value=sglN; }
+  $("newsnr").max = snrN; if(g.newsnr>snrN){ g.newsnr=snrN; $("newsnr").value=snrN; }
+
+  // slider value labels
+  const lab = {members:v=>v, newhh:v=>v, newsgl:v=>v, newsnr:v=>v, hh:v=>"$"+v, sgl:v=>"$"+v, snr:v=>"$"+v, assess:v=>"$"+v,
+    extp:v=>"$"+v, extt:v=>v+"%", wd:v=>v+" h", we:v=>v+" h", weeks:v=>v+" wk", stand:v=>v,
+    peak:v=>v+"%", wage:v=>"$"+v, guards:v=>v, proggh:v=>v+" gh", spons:v=>fmt(v), patron:v=>fmt(v),
+    rent:v=>fmt(v), lessons:v=>fmt(v), gap:v=>fmt(v)};
+  sliders.forEach(k=>{ if($("v_"+k)) $("v_"+k).textContent = lab[k](g[k]); });
+
+  $("cap_newhh").textContent = `First-timers pay a one-time $150 fee; returning households pay $50. Capped at ${hhN} — this scenario's HH count.`;
+  $("cap_newsgl").textContent = `Same $150 new / $50 returning fee structure. Capped at ${sglN} — this scenario's Single count.`;
+  $("cap_newsnr").textContent = `Same $150 new / $50 returning fee structure. Capped at ${snrN} — this scenario's Senior count.`;
+
+  const dues = hhN*g.hh + sglN*g.sgl + snrN*g.snr;
+  const extBuyers = Math.round(g.members*g.extt/100);
+  const ext = extBuyers*g.extp;
+  const newTotal = g.newhh + g.newsgl + g.newsnr;
+  const returning = (hhN-g.newhh) + (sglN-g.newsgl) + (snrN-g.newsnr);
+  const newFee = newTotal*150;
+  const maintFee = returning*50;
+  const fees = newFee + maintFee;
+  const assessRev = g.members*g.assess;
+
+  // --- guard math
+  const wkOpen = 5*g.wd + 2*g.we;
+  const seasonOpen = wkOpen*g.weeks;
+  const openGH = seasonOpen*g.stand + seasonOpen*(g.peak/100);
+  const guardWages = openGH*g.wage;
+  const instr = g.proggh*g.wage;
+  const wagesAll = guardWages + instr + g.stipend;
+  const ptax = 0.092*wagesAll;
+  const payroll = wagesAll + ptax;
+  const ghPerWeek = g.weeks? (openGH+g.proggh)/g.weeks : 0;
+  const perGuard = g.guards? ghPerWeek/g.guards : 0;
+
+  // --- revenue & opex
+  const opRev = dues + ext + fees + g.field + g.swimin + g.conc + g.rent + g.spons + g.patron + g.lessons;
+  const opex = payroll + g.chem + g.ins + g.util + g.rm + g.swimex + g.fixed;
+
+  // --- restricted assessment logic
+  const loanShort = Math.max(0, g.loan - assessRev);
+  const restrictedExcess = Math.max(0, assessRev - g.loan);
+
+  // --- cash walk
+  const endCash = g.start + opRev - opex - g.gap - loanShort;
+  const vsFloor = endCash - g.floor;
+
+  // --- verdict
+  const vd = $("verdict");
+  vd.className = "verdict " + (vsFloor>=0 ? "pass":"fail");
+  $("vd_num").textContent = (vsFloor>=0? "PASSES by ":"FAILS by ") + fmt(Math.abs(vsFloor));
+  $("vd_txt").textContent = `Ends 2027 with ${fmt(endCash)} usable cash vs. the ${fmt(g.floor)} floor` +
+    (endCash<0 ? " — WGRA goes cash-negative." : ".") +
+    (restrictedExcess>0 ? ` (Plus ${fmt(restrictedExcess)} locked in the restricted loan reserve — not spendable.)` : "");
+
+  // --- KPIs
+  $("k_total").textContent = fmt(opRev+assessRev);
+  $("k_oprev").textContent = fmt(opRev);
+  $("k_opex").textContent = fmt(opex);
+  const winterBurn = 990*3;
+  const availApr = g.start - winterBurn;
+  const perMember = g.members ? (dues+fees+ext)/g.members + g.assess : 0;
+  const needApr = Math.max(0, g.gap - availApr);
+  const aprMembers = perMember>0 ? Math.ceil(needApr/perMember) : 0;
+  $("k_apr").textContent = aprMembers + " of " + g.members;
+
+  // --- loan table
+  $("t_loan").innerHTML = `
+    <tr><td>Assessment money collected (${g.members} members × $${g.assess})</td><td>${fmt(assessRev)}</td></tr>
+    <tr><td>What the bank must be paid this year</td><td>${fmt(-g.loan)}</td></tr>
+    ${loanShort>0
+      ? `<tr class="tot"><td style="color:var(--red)">Not enough — operating money must make up</td><td style="color:var(--red)">${fmt(-loanShort)}</td></tr>`
+      : `<tr class="tot"><td style="color:var(--green)">Loan fully covered — extra locked in reserve</td><td style="color:var(--green)">${fmt(restrictedExcess)}</td></tr>`}
+    <tr class="sub"><td>Members needed for the assessment alone to cover the loan</td><td>${Math.ceil(g.loan/g.assess)} members</td></tr>`;
+  $("lockmsg").textContent = "The rule: every assessment dollar belongs to the bank the moment it's collected. It can pay the loan — nothing else. Any extra sits in a locked reserve for next year's loan payment and never counts as spendable cash in this planner.";
+
+  // --- guard table
+  $("t_guard").innerHTML = `
+    <tr><td>Hours the pool is guarded each week (${g.wd}h × 5 weekdays + ${g.we}h × 2 weekend days)</td><td>${wkOpen.toFixed(1)} hrs</td></tr>
+    <tr><td>Total guard work for the season (${g.stand} on the clock — 1 on stand + 1 backup — +1 more during the busiest ${g.peak}% of hours)</td><td>${Math.round(openGH).toLocaleString()} guard-hrs</td></tr>
+    <tr><td>Extra guard work for swim lessons</td><td>${g.proggh} guard-hrs</td></tr>
+    <tr><td>Guard work needed per week</td><td>${ghPerWeek.toFixed(1)} guard-hrs</td></tr>
+    <tr class="tot"><td>Weekly workload per guard, split among ${g.guards} guards</td><td>${perGuard.toFixed(1)} hrs each</td></tr>`;
+  const gf = $("guardflag");
+  if(perGuard>35) gf.innerHTML = `<div class="flag bad">This schedule doesn't work: each guard would need to work ${perGuard.toFixed(1)} hours a week. Hire more guards, guard fewer hours, or cut the lesson program.</div>`;
+  else if(perGuard>30) gf.innerHTML = `<div class="flag warn">Workable but tight: ${perGuard.toFixed(1)} hours a week per guard, with no backup if someone gets sick or quits. Hiring one more guard costs nothing extra (the same total hours just get split more ways) — it's insurance.</div>`;
+  else gf.innerHTML = `<div class="flag ok">Comfortable: ${perGuard.toFixed(1)} hours a week per guard leaves room to cover call-outs and vacations.</div>`;
+
+  // --- cash walk
+  $("t_cash").innerHTML = `
+    <tr><td>In the bank on January 1, 2027</td><td>${fmt(g.start)}</td></tr>
+    <tr><td>+ Everything collected from members &amp; programs (except the assessment)</td><td>${fmt(opRev)}</td></tr>
+    <tr><td>− Cost of running the pool for the year</td><td>${fmt(-opex)}</td></tr>
+    <tr><td>− Final construction bill (April)</td><td>${fmt(-g.gap)}</td></tr>
+    <tr><td>− Loan payment portion the assessment didn't cover</td><td>${fmt(-loanShort)}</td></tr>
+    <tr class="tot"><td>In the bank on December 31, 2027</td><td style="color:${endCash>=g.floor?'var(--green)':'var(--red)'}">${fmt(endCash)}</td></tr>
+    <tr class="sub"><td>Cushion the board requires</td><td>${fmt(g.floor)}</td></tr>
+    <tr class="sub"><td>April 1 reality check: ${fmt(needApr)} must already be collected to pay the builder — that means this many members fully paid up</td><td>${aprMembers} (2025 pace: 42)</td></tr>`;
+
+  // --- revenue detail
+  $("t_rev").innerHTML = `
+    <tr><td>Membership dues (${hhN} HH / ${sglN} Sgl / ${snrN} Sr)</td><td>${fmt(dues)}</td></tr>
+    <tr><td>Extended hours (${extBuyers} buyers × $${g.extp})</td><td>${fmt(ext)}</td></tr>
+    <tr><td>New member fee (${newTotal} × $150: ${g.newhh} HH / ${g.newsgl} Sgl / ${g.newsnr} Sr)</td><td>${fmt(newFee)}</td></tr>
+    <tr><td>Returning member maintenance fee (${returning} × $50)</td><td>${fmt(maintFee)}</td></tr>
+    <tr><td>YMCA field rental</td><td>${fmt(g.field)}</td></tr>
+    <tr><td>Swim team income</td><td>${fmt(g.swimin)}</td></tr>
+    <tr><td>Concessions / buddy / guest</td><td>${fmt(g.conc)}</td></tr>
+    <tr><td>Pool rentals / events</td><td>${fmt(g.rent)}</td></tr>
+    <tr><td>Sponsorships</td><td>${fmt(g.spons)}</td></tr>
+    <tr><td>Founding Patron / bricks (one-time)</td><td>${fmt(g.patron)}</td></tr>
+    <tr><td>Swim lessons (gross)</td><td>${fmt(g.lessons)}</td></tr>
+    <tr class="tot"><td>Operating revenue</td><td>${fmt(opRev)}</td></tr>
+    <tr class="sub"><td>+ Assessment (restricted — see loan panel)</td><td>${fmt(assessRev)}</td></tr>
+    <tr class="tot"><td>Total collections</td><td>${fmt(opRev+assessRev)}</td></tr>`;
+
+  // --- expense detail
+  $("t_exp").innerHTML = `
+    <tr><td>Guard wages (${Math.round(openGH).toLocaleString()} gh × $${g.wage})</td><td>${fmt(guardWages)}</td></tr>
+    <tr><td>Lesson instructors (${g.proggh} gh × $${g.wage})</td><td>${fmt(instr)}</td></tr>
+    <tr><td>Manager stipend</td><td>${fmt(g.stipend)}</td></tr>
+    <tr><td>Payroll taxes (9.2%)</td><td>${fmt(ptax)}</td></tr>
+    <tr><td>Pool chemicals</td><td>${fmt(g.chem)}</td></tr>
+    <tr><td>Insurance</td><td>${fmt(g.ins)}</td></tr>
+    <tr><td>Utilities</td><td>${fmt(g.util)}</td></tr>
+    <tr><td>R&amp;M (pool + general + field)</td><td>${fmt(g.rm)}</td></tr>
+    <tr><td>Swim team expense</td><td>${fmt(g.swimex)}</td></tr>
+    <tr><td>Admin / processing / marketing / COGS</td><td>${fmt(g.fixed)}</td></tr>
+    <tr class="tot"><td>Operating expenses</td><td>${fmt(opex)}</td></tr>`;
+
+  // --- team asks
+  let asks;
+  if(vsFloor>=0){
+    asks = `<div class="flag ok" style="margin-top:0">This plan clears the floor by ${fmt(vsFloor)}. The numbers below are what each owner must deliver to keep it true:</div><ul class="asks">
+      <li><b>Membership chair:</b> ${g.members} paid members (${hhN} households) — and ${aprMembers} fully paid by April 1.</li>
+      <li><b>Sponsorship lead:</b> ${fmt(g.spons)} recurring + ${fmt(g.patron)} one-time patron/brick gifts.</li>
+      <li><b>Events lead:</b> ${fmt(g.rent)} in rentals${g.lessons>0?` + ${fmt(g.lessons)} in lessons`:""}.</li>
+      <li><b>Pool manager:</b> ${g.guards} guards hired and certified before Memorial Day; schedule of ${wkOpen.toFixed(0)} staffed hrs/wk.</li></ul>`;
+  } else {
+    const gapAmt = -vsFloor;
+    const mNeed = Math.ceil(gapAmt/perMember);
+    const hhNeed = Math.ceil(gapAmt/hhN/5)*5;
+    asks = `<div class="flag bad" style="margin-top:0">This plan is ${fmt(gapAmt)} short of the floor. Any one of these closes it:</div><ul class="asks">
+      <li><b>+${mNeed} members</b> (each carries ~${fmt(perMember)} incl. assessment), or</li>
+      <li><b>+$${hhNeed} on Household dues</b> (${hhN} households), or</li>
+      <li><b>+${fmt(gapAmt)} in sponsorships / patron gifts / rentals</b> (zero-guard-cost lines first), or</li>
+      <li>an equivalent mix — e.g. half members, half sponsorship.</li></ul>`;
+  }
+  $("asks").innerHTML = asks;
+}
+
+[...sliders,...numbers].forEach(k=> $(k).addEventListener("input", calc));
+setAll(DEFAULTS);
+</script>
+</body>
+</html>
